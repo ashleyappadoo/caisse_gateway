@@ -369,9 +369,15 @@ td.accent { color: var(--text); font-weight: 600; }
 </header>
 
 <div class="config-bar">
-  <span class="config-label">Source CSV</span>
-  <input class="config-input" id="csvUrl"
-    placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv">
+  <span class="config-label">Source</span>
+  <select id="srcMode" onchange="updatePlaceholder()" style="
+    background:var(--bg3);border:1px solid var(--border);color:var(--text);
+    font-family:var(--sans);font-size:12px;font-weight:600;
+    padding:7px 10px;border-radius:var(--radius);outline:none;cursor:pointer;">
+    <option value="script">⚡ Apps Script (temps réel)</option>
+    <option value="csv">📄 CSV publié (cache ~2min)</option>
+  </select>
+  <input class="config-input" id="csvUrl" placeholder="https://script.google.com/macros/s/…/exec">
   <button class="btn-connect" onclick="saveAndLoad()">Connecter</button>
   <button class="btn-clear"   onclick="clearHistory()">Effacer historique</button>
 </div>
@@ -504,42 +510,97 @@ function startPolling() {
   }, 1000);
 }
 
+function updatePlaceholder() {
+  const mode = document.getElementById('srcMode').value;
+  document.getElementById('csvUrl').placeholder = mode === 'script'
+    ? 'https://script.google.com/macros/s/…/exec'
+    : 'https://docs.google.com/spreadsheets/d/…/pub?output=csv';
+}
+
+function loadConfig() {
+  const url  = localStorage.getItem(URL_KEY);
+  const mode = localStorage.getItem(URL_KEY + '_mode') || 'script';
+  if (url) {
+    document.getElementById('csvUrl').value = url;
+    document.getElementById('srcMode').value = mode;
+    updatePlaceholder();
+    loadRows();
+    renderTable([]);
+    updateKPIs();
+    startPolling();
+  }
+}
+
+function saveAndLoad() {
+  const url  = document.getElementById('csvUrl').value.trim();
+  const mode = document.getElementById('srcMode').value;
+  if (!url) { showToast('Entrer une URL', 'err'); return; }
+  localStorage.setItem(URL_KEY, url);
+  localStorage.setItem(URL_KEY + '_mode', mode);
+  startPolling();
+}
+
 async function fetchData() {
-  const url = document.getElementById('csvUrl').value.trim();
+  const url  = document.getElementById('csvUrl').value.trim();
+  const mode = document.getElementById('srcMode').value;
   if (!url) return;
   countdown = INTERVAL;
 
-  const bust     = (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-  const direct   = url + bust;
-  const proxy    = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&t=${Date.now()}`;
-  const isFile   = location.protocol === 'file:';
+  const isFile = location.protocol === 'file:';
 
   try {
-    let csv;
-    // En file:// on tente direct puis proxy
-    if (isFile) {
+    let newIds = [];
+
+    if (mode === 'script') {
+      // ── Apps Script JSON — temps réel, pas de cache ──────────────────
+      // Apps Script nécessite redirect → fetch avec redirect:follow
+      const scriptUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      let data;
       try {
-        const r = await fetch(direct, {cache:'no-store'});
-        if (!r.ok) throw 0;
-        csv = await r.text();
-      } catch {
+        const r = await fetch(scriptUrl, {redirect: 'follow', cache: 'no-store'});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        data = await r.json();
+      } catch(e) {
+        if (!isFile) throw e;
+        // Fallback proxy si file://
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&t=${Date.now()}`;
         const r = await fetch(proxy);
         if (!r.ok) throw new Error(`Proxy HTTP ${r.status}`);
+        data = await r.json();
+      }
+      newIds = mergeJSON(data);
+
+    } else {
+      // ── CSV publié (avec cache Google ~2min) ─────────────────────────
+      const bust   = (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      const direct = url + bust;
+      const proxy  = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&t=${Date.now()}`;
+      let csv;
+      if (isFile) {
+        try {
+          const r = await fetch(direct, {cache:'no-store'});
+          if (!r.ok) throw 0;
+          csv = await r.text();
+        } catch {
+          const r = await fetch(proxy);
+          if (!r.ok) throw new Error(`Proxy HTTP ${r.status}`);
+          csv = await r.text();
+        }
+      } else {
+        const r = await fetch(direct, {cache:'no-store'});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         csv = await r.text();
       }
-    } else {
-      const r = await fetch(direct, {cache:'no-store'});
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      csv = await r.text();
+      newIds = mergeCSV(csv);
     }
 
-    const newIds = mergeCSV(csv);
     renderTable(newIds);
     updateKPIs();
     saveRows();
 
     document.getElementById('pulseDot').className = 'pulse';
-    document.getElementById('liveLabel').textContent = 'Live';
+    document.getElementById('liveLabel').textContent =
+      mode === 'script' ? '⚡ Temps réel' : 'Live (cache)';
   } catch(e) {
     document.getElementById('pulseDot').className = 'pulse err';
     document.getElementById('liveLabel').textContent = 'Erreur';
@@ -650,7 +711,51 @@ function mergeCSV(csvText) {
   return newIds;
 }
 
-// ─── Parsers ticket ───────────────────────────────────────────────────────
+// ─── Merge JSON (mode Apps Script) ───────────────────────────────────────
+function mergeJSON(rows) {
+  if (!Array.isArray(rows)) return [];
+  const newIds  = [];
+  const existing = new Map(allRows.map(r => [r.transactionId, r]));
+
+  // Apps Script renvoie les clés avec la casse originale du sheet
+  rows.forEach(r => {
+    const tid = r.transactionId || r.transactionid || r.transaction_id || '';
+    if (!tid) return;
+
+    const ticket  = r.ticket_client || r.ticketclient || '';
+    const ref     = extractRef(ticket);
+    const {date, heure} = extractDateHeure(ticket);
+    const amount  = parseFloat(r.amount || 0);
+
+    const enriched = {
+      transactionId:   tid,
+      name:            r.name || '',
+      amount,
+      private_data:    r.private_data || r.privatedata || r.privateData || '',
+      status:          (r.status || '').toUpperCase(),
+      isCompleted:     r.isCompleted === true || r.iscompleted === 'true' || r.isCompleted === 'TRUE',
+      isPayed:         r.isPayed === true || r.ispayed === 'true' || r.isPayed === 'TRUE',
+      ticket_client:   ticket,
+      ticket_merchant: r.ticket_merchant || r.ticketmerchant || '',
+      ref_ipn:         ref,
+      date,
+      heure,
+    };
+
+    if (!existing.has(tid)) {
+      newIds.push(tid);
+      allRows.unshift(enriched);
+    } else {
+      const old = existing.get(tid);
+      if (old.status !== enriched.status) {
+        Object.assign(old, enriched);
+        newIds.push(tid);
+      }
+    }
+  });
+
+  return newIds;
+}
 function extractRef(ticket) {
   if (!ticket) return '—';
   const m = ticket.match(/ref[:\s]+(\d{8,})/i);
