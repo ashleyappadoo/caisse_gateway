@@ -425,6 +425,11 @@ pre.json {
       <label>API Key (optionnel)</label>
       <input id="cfgApiKey" type="password" placeholder="laisser vide si non configurée">
     </div>
+    <div class="field">
+      <label>Webhook URL (optionnel)</label>
+      <input id="cfgWebhook" type="text" placeholder="https://mon-erp.com/webhook">
+      <span style="font-size:10px;color:var(--muted);margin-top:2px;">Appelé par la gateway à la fin de chaque TX</span>
+    </div>
 
     <hr class="divider">
     <div class="section-title">Endpoints</div>
@@ -655,6 +660,7 @@ function cfg(key, fallback) {
 function loadConfig() {
   document.getElementById('cfgUrl').value        = cfg('url',    'http://127.0.0.1:8080');
   document.getElementById('cfgApiKey').value      = cfg('apikey', '');
+  document.getElementById('cfgWebhook').value     = cfg('webhook', '');
   document.getElementById('epPayment').value      = cfg('epPayment',       '/paymentIntent');
   document.getElementById('epStatus').value       = cfg('epStatus',        '/checkPaymentStatus');
   document.getElementById('epCancel').value       = cfg('epCancel',        '/cancelPayment');
@@ -666,9 +672,9 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  const fields = ['url','apikey','epPayment','epStatus','epCancel',
+  const fields = ['url','apikey','webhook','epPayment','epStatus','epCancel',
     'epPreauth','epPreauthValidate','epPreauthCancel','epPreauthStatus','epHealth'];
-  const ids    = ['cfgUrl','cfgApiKey','epPayment','epStatus','epCancel',
+  const ids    = ['cfgUrl','cfgApiKey','cfgWebhook','epPayment','epStatus','epCancel',
     'epPreauth','epPreauthValidate','epPreauthCancel','epPreauthStatus','epHealth'];
   fields.forEach((k,i) => localStorage.setItem('sim_' + k, document.getElementById(ids[i]).value));
   toast('Configuration sauvegardée', 'ok');
@@ -676,8 +682,9 @@ function saveConfig() {
 }
 
 // ── HTTP helper ─────────────────────────────────────────
-function baseUrl()  { return document.getElementById('cfgUrl').value.replace(/\/$/, ''); }
-function apiKey()   { return document.getElementById('cfgApiKey').value; }
+function baseUrl()    { return document.getElementById('cfgUrl').value.replace(/\/$/, ''); }
+function apiKey()     { return document.getElementById('cfgApiKey').value; }
+function webhookUrl() { return document.getElementById('cfgWebhook').value.trim(); }
 
 async function apiFetch(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
@@ -760,7 +767,8 @@ async function quickPay() {
 
   try {
     const r = await apiFetch('POST', document.getElementById('epPayment').value, {
-      data: { name: 'quick-test', amount: 100, private_data: 'QUICK-1EUR' }
+      data: { name: 'quick-test', amount: 100, private_data: 'QUICK-1EUR',
+              ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
     });
     if (!r.ok || !r.data.idTransaction) throw new Error(JSON.stringify(r.data));
 
@@ -796,7 +804,9 @@ async function startPayment() {
 
   try {
     const r = await apiFetch('POST', document.getElementById('epPayment').value, {
-      data: { name, amount, ...(priv ? {private_data: priv} : {}) }
+      data: { name, amount,
+              ...(priv ? {private_data: priv} : {}),
+              ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
     });
     showResponse('payResponse', r.data, r.ok ? 'pending' : 'error');
     if (!r.ok || !r.data.idTransaction) { setBar('payBar', false); return; }
@@ -869,7 +879,8 @@ async function startPreauth() {
     const r = await apiFetch('POST', document.getElementById('epPreauth').value, {
       data: { name, amount,
         ...(ref  ? {reference:    ref}  : {}),
-        ...(priv ? {private_data: priv} : {}) }
+        ...(priv ? {private_data: priv} : {}),
+        ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
     });
     showResponse('paResponse', r.data, r.ok ? 'pending' : 'error');
     if (!r.ok || !r.data.preauthId) { setBar('paBar', false); return; }
