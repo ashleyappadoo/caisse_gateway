@@ -2,993 +2,541 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#080910">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Caisse SIM">
-<title>Caisse Simulator</title>
-
+<meta name="apple-mobile-web-app-title" content="Simulation Caisse">
+<title>Smile&Pay · Simulation Caisse</title>
 <link rel="manifest" href="manifest.json">
-
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap');
-
 :root {
-  --bg:        #080910;
-  --bg2:       #0f1118;
-  --bg3:       #171b26;
-  --border:    #1e2333;
-  --accent:    #5865f2;
-  --accent2:   #eb5757;
-  --green:     #2dd4a0;
-  --yellow:    #f0b429;
-  --text:      #e8eaf0;
-  --muted:     #5a6080;
-  --mono:      'JetBrains Mono', monospace;
-  --sans:      'Syne', sans-serif;
+  --bg:      #F7F8FA;
+  --bg2:     #FFFFFF;
+  --bg3:     #F0F1F5;
+  --border:  #E2E4EC;
+  --border2: #C8CBD8;
+  --text:    #111318;
+  --text2:   #3D4155;
+  --muted:   #7B8099;
+  --muted2:  #A8ADBC;
+  --snp:     #111111;
+  --green:   #1DB87E;
+  --green-bg:#EAF8F2;
+  --red:     #E53E3E;
+  --red-bg:  #FEF2F2;
+  --blue:    #2563EB;
+  --blue-bg: #EFF6FF;
+  --yellow:  #D97706;
+  --yel-bg:  #FFFBEB;
+  --sans:    'Plus Jakarta Sans', sans-serif;
+  --mono:    'DM Mono', monospace;
+  --r:       8px;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+/* ── Root layout : header fixe + corps en flex ── */
+html { height: 100%; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100%; display: flex; flex-direction: column;
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 13px;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* ── Grid layout ──────────────────────────── */
-.app {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  grid-template-rows: 56px 1fr;
-  height: 100vh;
-}
-
-@media (max-width: 700px) {
-  .app { grid-template-columns: 1fr; grid-template-rows: 56px auto 1fr; height: auto; min-height: 100vh; }
-  .sidebar { grid-row: 2; border-right: none; border-bottom: 1px solid var(--border); }
-  .main    { grid-row: 3; }
-}
-
-/* ── Header ───────────────────────────────── */
 header {
-  grid-column: 1 / -1;
-  background: var(--bg2);
+  flex-shrink: 0;
+  height: 54px; background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 16px;
+  display: flex; align-items: center; padding: 0 16px; gap: 14px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
 }
 
-.logo {
-  font-family: var(--sans);
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: -0.02em;
-  color: var(--text);
+.cols {
+  flex: 1; display: flex;
+  overflow: hidden;   /* les enfants scrollent indépendamment */
+  min-height: 0;
 }
-.logo span { color: var(--accent); }
 
-.status-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-  margin-left: auto;
-}
-.led {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--muted);
-  transition: background .3s;
-}
-.led.online  { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.led.offline { background: var(--accent2); }
-
-/* ── Sidebar (config) ─────────────────────── */
 .sidebar {
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  width: 264px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
 }
 
-.section-title {
-  font-family: var(--sans);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.field { display: flex; flex-direction: column; gap: 4px; }
-.field label { font-size: 10px; color: var(--muted); letter-spacing: .04em; }
-.field input, .field select {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 7px 10px;
-  border-radius: 4px;
-  width: 100%;
-  outline: none;
-  transition: border-color .15s;
-}
-.field input:focus, .field select:focus { border-color: var(--accent); }
-.field select { appearance: none; cursor: pointer; }
-
-.btn-save {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 12px;
-  padding: 9px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-  transition: opacity .15s;
-}
-.btn-save:hover { opacity: .85; }
-
-/* ── Main area ────────────────────────────── */
 .main {
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0;
 }
 
-/* ── Cards ────────────────────────────────── */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
+/* Mobile : stack */
+@media (max-width: 680px) {
+  body  { height: auto; min-height: 100vh; }
+  .cols { flex-direction: column; overflow: visible; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; }
+  .main    { overflow-y: visible; }
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg3);
+/* ── Brand ── */
+.snp { display:flex; flex-direction:column; line-height:1; flex-shrink:0; }
+.snp-t { font-family:Georgia,serif; font-size:16px; font-weight:700; color:var(--snp); }
+.snp svg { display:block; width:30px; height:5px; overflow:visible; margin-top:2px; }
+.h-sep { width:1px; height:22px; background:var(--border2); }
+.h-sub { font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; }
+.pill {
+  margin-left:auto; display:flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:10px; color:var(--muted);
+  background:var(--bg3); border:1px solid var(--border);
+  padding:4px 10px; border-radius:99px; flex-shrink:0;
+}
+.led { width:6px; height:6px; border-radius:50%; background:var(--muted2); transition:background .3s; }
+.led.on  { background:var(--green); box-shadow:0 0 5px var(--green); animation:blink 2s ease-in-out infinite; }
+.led.off { background:var(--red); animation:none; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Sidebar ── */
+.stitle { font-size:9px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted2); padding-bottom:8px; border-bottom:1px solid var(--border); }
+.field { display:flex; flex-direction:column; gap:3px; }
+.field label { font-size:10px; font-weight:700; color:var(--muted); }
+.field input {
+  background:var(--bg3); border:1.5px solid var(--border); color:var(--text);
+  font-family:var(--mono); font-size:12px; padding:7px 10px;
+  border-radius:var(--r); width:100%; outline:none; transition:border-color .15s;
+  -webkit-appearance:none;
+}
+.field input:focus { border-color:var(--snp); }
+.field .hint { font-size:10px; color:var(--muted2); line-height:1.4; }
+.hr { border:none; border-top:1px solid var(--border); }
+.btn-save {
+  background:var(--snp); color:#fff; border:none;
+  font-family:var(--sans); font-weight:700; font-size:12px;
+  padding:10px; border-radius:var(--r); cursor:pointer; width:100%;
 }
 
-.card-title {
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: 13px;
+/* ── Quick pay ── */
+.qp {
+  background:var(--bg2); border:1.5px dashed var(--border2);
+  border-radius:var(--r); padding:18px 14px;
+  display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
 }
-
-.badge {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 99px;
-  font-weight: 500;
-  letter-spacing: .04em;
+.qp-title { font-size:12px; font-weight:700; color:var(--text2); }
+.btn-qp {
+  font-family:var(--sans); font-weight:800; font-size:19px;
+  padding:15px 32px; border-radius:var(--r); border:none;
+  background:var(--snp); color:#fff; cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);
+  transition:transform .12s, box-shadow .12s;
+  display:flex; align-items:center; gap:8px;
 }
-.badge-post { background: #1a2a4a; color: #5ca3f5; }
-.badge-get  { background: #1a3a2a; color: var(--green); }
+.btn-qp:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.22); }
+.btn-qp:disabled { opacity:.4; cursor:not-allowed; }
+.qp-hint { font-size:11px; color:var(--muted); }
 
-.card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+/* ── Cards ── */
+.card { background:var(--bg2); border:1.5px solid var(--border); border-radius:var(--r); overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.ch { display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border); background:var(--bg3); }
+.ct { font-weight:700; font-size:13px; }
+.badge { font-size:10px; padding:2px 7px; border-radius:99px; font-weight:700; font-family:var(--mono); letter-spacing:.3px; }
+.bp { background:var(--blue-bg); color:var(--blue); }
+.bg { background:var(--green-bg); color:var(--green); }
+.cb { padding:14px; display:flex; flex-direction:column; gap:10px; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
-/* ── Input row ────────────────────────────── */
-.input-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-@media (max-width: 500px) { .input-row { grid-template-columns: 1fr; } }
-
-/* ── Action buttons ───────────────────────── */
-.actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
+/* ── Buttons ── */
+.acts { display:flex; gap:8px; flex-wrap:wrap; }
 .btn {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 4px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all .15s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-family:var(--sans); font-size:12px; font-weight:700;
+  padding:8px 14px; border-radius:var(--r); border:1.5px solid transparent;
+  cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px;
 }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn:disabled { opacity:.38; cursor:not-allowed; }
+.bp2 { background:var(--snp); color:#fff; border-color:var(--snp); }
+.br  { background:transparent; color:var(--red); border-color:var(--red); }
+.br:hover:not(:disabled) { background:var(--red-bg); }
+.bn  { background:var(--bg3); color:var(--text2); border-color:var(--border); }
+.bgr { background:transparent; color:var(--green); border-color:var(--green); }
+.bgr:hover:not(:disabled) { background:var(--green-bg); }
 
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.btn-primary:hover:not(:disabled) { background: #4752c4; }
-
-.btn-danger {
-  background: transparent;
-  color: var(--accent2);
-  border-color: var(--accent2);
-}
-.btn-danger:hover:not(:disabled) { background: rgba(235,87,87,.12); }
-
-.btn-neutral {
-  background: var(--bg3);
-  color: var(--text);
-  border-color: var(--border);
-}
-.btn-neutral:hover:not(:disabled) { border-color: var(--accent); }
-
-.btn-green {
-  background: transparent;
-  color: var(--green);
-  border-color: var(--green);
-}
-.btn-green:hover:not(:disabled) { background: rgba(45,212,160,.1); }
-
-/* ── Spinner ──────────────────────────────── */
+/* ── Spin ── */
 .spin {
-  width: 12px; height: 12px;
-  border: 2px solid rgba(255,255,255,.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  display: none;
+  width:12px; height:12px; border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff; border-radius:50%;
+  animation:spin .7s linear infinite; display:none;
 }
-.spinning .spin { display: inline-block; }
+.go .spin { display:inline-block; }
+@keyframes spin{to{transform:rotate(360deg)}}
 
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ── Response ── */
+.rp {
+  background:var(--bg3); border:1.5px solid var(--border);
+  border-radius:var(--r); padding:12px;
+  font-family:var(--mono); font-size:11px; line-height:1.6; min-height:52px;
+  transition:border-color .3s;
+}
+.rp.ok  { border-color:var(--green); }
+.rp.err { border-color:var(--red); }
+.rp.pend{ border-color:var(--yellow); }
+.rl { font-size:10px; color:var(--muted); margin-bottom:6px; display:flex; }
+.rl .ts { margin-left:auto; }
+pre { white-space:pre-wrap; word-break:break-all; }
+.key  { color:var(--blue); }
+.str  { color:var(--green); }
+.num  { color:#D97706; }
+.bool { color:var(--snp); font-weight:600; }
+.null { color:var(--muted); }
 
-/* ── Response panel ───────────────────────── */
-.response-panel {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 12px;
-  font-size: 11px;
-  line-height: 1.6;
-  min-height: 60px;
-  position: relative;
-  transition: border-color .3s;
-}
-.response-panel.ok     { border-color: rgba(45,212,160,.4); }
-.response-panel.error  { border-color: rgba(235,87,87,.4); }
-.response-panel.pending{ border-color: rgba(240,180,41,.4); }
+/* ── Poll bar ── */
+.pb { height:2px; background:var(--border); border-radius:99px; overflow:hidden; display:none; }
+.pb.on { display:block; }
+.pb::after { content:''; display:block; width:40%; height:100%; background:var(--green); animation:sl 1.2s ease-in-out infinite; }
+@keyframes sl{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
 
-.response-label {
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.response-label .ts { margin-left: auto; }
+/* ── Status ── */
+.sb { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700; font-family:var(--mono); }
+.sa { background:var(--green-bg); color:var(--green); }
+.sd { background:var(--red-bg); color:var(--red); }
+.sp { background:var(--yel-bg); color:var(--yellow); }
 
-pre.json {
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: var(--mono);
-}
-.json .key    { color: #7aa2f7; }
-.json .str    { color: var(--green); }
-.json .num    { color: #ff9e64; }
-.json .bool   { color: var(--yellow); }
-.json .null   { color: var(--muted); }
-
-/* ── Status badge ─────────────────────────── */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-}
-.s-approved { background: rgba(45,212,160,.15); color: var(--green); }
-.s-declined { background: rgba(235,87,87,.15);  color: var(--accent2); }
-.s-pending  { background: rgba(240,180,41,.15); color: var(--yellow); }
-.s-error    { background: rgba(235,87,87,.15);  color: var(--accent2); }
-
-/* ── Poll indicator ───────────────────────── */
-.polling-bar {
-  height: 2px;
-  background: var(--border);
-  border-radius: 99px;
-  overflow: hidden;
-  display: none;
-}
-.polling-bar.active { display: block; }
-.polling-bar::after {
-  content: '';
-  display: block;
-  width: 40%;
-  height: 100%;
-  background: var(--accent);
-  animation: slide 1.2s ease-in-out infinite;
-}
-@keyframes slide {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(350%); }
-}
-
-/* ── Quick pay button ─────────────────────── */
-.quick-pay {
-  background: var(--bg2);
-  border: 2px dashed var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.btn-quickpay {
-  font-family: var(--sans);
-  font-weight: 800;
-  font-size: 22px;
-  padding: 18px 40px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(135deg, var(--accent), #7c3aed);
-  color: #fff;
-  cursor: pointer;
-  letter-spacing: -0.02em;
-  transition: transform .12s, box-shadow .12s;
-  box-shadow: 0 4px 24px rgba(88,101,242,.3);
-  position: relative;
-  overflow: hidden;
-}
-.btn-quickpay:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(88,101,242,.45);
-}
-.btn-quickpay:active:not(:disabled) { transform: translateY(0); }
-.btn-quickpay:disabled { opacity: .4; cursor: not-allowed; }
-.btn-quickpay .spin { border-color: rgba(255,255,255,.3); border-top-color: #fff; }
-
-.quick-hint { font-size: 11px; color: var(--muted); }
-
-/* ── Divider ──────────────────────────────── */
-.divider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 4px 0;
-}
-
-/* ── Toast ────────────────────────────────── */
+/* ── Toast ── */
 #toast {
-  position: fixed;
-  bottom: 20px; right: 20px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 10px 16px;
-  border-radius: 6px;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all .3s;
-  z-index: 100;
-  max-width: 280px;
+  position:fixed; bottom:14px; right:14px;
+  background:var(--bg2); border:1.5px solid var(--border);
+  color:var(--text); font-family:var(--mono); font-size:12px;
+  padding:10px 16px; border-radius:var(--r);
+  box-shadow:0 4px 16px rgba(0,0,0,.1);
+  transform:translateY(70px); opacity:0; transition:all .3s; z-index:999; max-width:280px;
 }
-#toast.show { transform: translateY(0); opacity: 1; }
-#toast.ok   { border-color: var(--green); }
-#toast.err  { border-color: var(--accent2); }
+#toast.show { transform:translateY(0); opacity:1; }
+#toast.ok  { border-color:var(--green); }
+#toast.err { border-color:var(--red); }
 </style>
 </head>
 <body>
 
-<div class="app">
+<!-- HEADER -->
+<header>
+  <div class="snp">
+    <span class="snp-t">Smile&amp;Pay</span>
+    <svg viewBox="0 0 30 5" fill="none"><path d="M1 1 Q15 7 29 1" stroke="#111" stroke-width="1.6" stroke-linecap="round"/></svg>
+  </div>
+  <div class="h-sep"></div>
+  <span class="h-sub">Simulation Caisse</span>
+  <div class="pill">
+    <div class="led" id="led"></div>
+    <span id="ledTxt">—</span>
+  </div>
+</header>
 
-  <!-- ── Header ──────────────────────────────────────── -->
-  <header>
-    <div class="logo">CAISSE<span>·</span>SIM</div>
-    <div style="font-size:11px; color:var(--muted); font-family:var(--sans);">Gateway POS Simulator</div>
-    <div class="status-pill">
-      <div class="led" id="healthLed"></div>
-      <span id="healthTxt">—</span>
-    </div>
-  </header>
+<div class="cols">
 
-  <!-- ── Sidebar config ──────────────────────────────── -->
-  <aside class="sidebar">
-    <div class="section-title">Configuration</div>
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="stitle">Configuration</div>
+  <div class="field"><label>Gateway URL</label><input id="cfgUrl" value="http://127.0.0.1:8080"></div>
+  <div class="field"><label>API Key (optionnel)</label><input id="cfgApiKey" type="password" placeholder="vide si non configurée"></div>
+  <div class="field">
+    <label>Webhook URL (optionnel)</label>
+    <input id="cfgWebhook" type="url" placeholder="https://hook.make.com/…">
+    <span class="hint">Appelé par la gateway à la fin de chaque TX</span>
+  </div>
+  <hr class="hr">
+  <div class="stitle">Endpoints</div>
+  <div class="field"><label>POST paymentIntent</label><input id="epPay" value="/paymentIntent"></div>
+  <div class="field"><label>GET checkPaymentStatus</label><input id="epStatus" value="/checkPaymentStatus"></div>
+  <div class="field"><label>POST cancelPayment</label><input id="epCancel" value="/cancelPayment"></div>
+  <hr class="hr">
+  <div class="field"><label>POST preauthIntent</label><input id="epPA" value="/preauthIntent"></div>
+  <div class="field"><label>POST preauthValidate</label><input id="epPV" value="/preauthValidate"></div>
+  <div class="field"><label>POST preauthCancel</label><input id="epPC" value="/preauthCancel"></div>
+  <div class="field"><label>GET checkPreauthStatus</label><input id="epPS" value="/checkPreauthStatus"></div>
+  <hr class="hr">
+  <div class="field"><label>GET health</label><input id="epHealth" value="/health"></div>
+  <button class="btn-save" onclick="saveCfg()">Sauvegarder &amp; Tester</button>
+  <div style="font-size:10px;color:var(--muted2);text-align:center;margin-top:auto;padding-top:6px">Polling 2s · Timeout 180s</div>
+</aside>
 
-    <div class="field">
-      <label>Gateway URL</label>
-      <input id="cfgUrl" type="text" value="http://127.0.0.1:8080" placeholder="http://192.168.1.x:8080">
-    </div>
-    <div class="field">
-      <label>API Key (optionnel)</label>
-      <input id="cfgApiKey" type="password" placeholder="laisser vide si non configurée">
-    </div>
-    <div class="field">
-      <label>Webhook URL (optionnel)</label>
-      <input id="cfgWebhook" type="text" placeholder="https://mon-erp.com/webhook">
-      <span style="font-size:10px;color:var(--muted);margin-top:2px;">Appelé par la gateway à la fin de chaque TX</span>
-    </div>
+<!-- MAIN -->
+<main class="main">
 
-    <hr class="divider">
-    <div class="section-title">Endpoints</div>
+  <!-- Quick pay -->
+  <div class="qp">
+    <div class="qp-title">Test rapide</div>
+    <button class="btn-qp" id="bqp" onclick="quickPay()"><div class="spin" id="qspin"></div>Encaisser 1,00 €</button>
+    <div class="qp-hint">Lance un paymentIntent à 100 centimes avec polling automatique</div>
+    <div id="qres"></div>
+  </div>
 
-    <div class="field">
-      <label>POST paymentIntent</label>
-      <input id="epPayment" value="/paymentIntent">
-    </div>
-    <div class="field">
-      <label>GET checkPaymentStatus</label>
-      <input id="epStatus" value="/checkPaymentStatus">
-    </div>
-    <div class="field">
-      <label>POST cancelPayment</label>
-      <input id="epCancel" value="/cancelPayment">
-    </div>
-
-    <hr class="divider">
-
-    <div class="field">
-      <label>POST preauthIntent</label>
-      <input id="epPreauth" value="/preauthIntent">
-    </div>
-    <div class="field">
-      <label>POST preauthValidate</label>
-      <input id="epPreauthValidate" value="/preauthValidate">
-    </div>
-    <div class="field">
-      <label>POST preauthCancel</label>
-      <input id="epPreauthCancel" value="/preauthCancel">
-    </div>
-    <div class="field">
-      <label>GET checkPreauthStatus</label>
-      <input id="epPreauthStatus" value="/checkPreauthStatus">
-    </div>
-
-    <hr class="divider">
-
-    <div class="field">
-      <label>GET health</label>
-      <input id="epHealth" value="/health">
-    </div>
-
-    <button class="btn-save" onclick="saveConfig()">Sauvegarder & Tester</button>
-
-    <div style="margin-top:auto; padding-top:12px; font-size:10px; color:var(--muted); text-align:center;">
-      Polling toutes les 2s · Timeout 180s
-    </div>
-  </aside>
-
-  <!-- ── Main ───────────────────────────────────────── -->
-  <main class="main">
-
-    <!-- Quick Pay -->
-    <div class="quick-pay">
-      <div style="font-family:var(--sans); font-weight:600; font-size:14px;">Test rapide</div>
-      <button class="btn-quickpay" id="btnQuickPay" onclick="quickPay()">
-        <div class="spin" id="quickSpin"></div>
-        Encaisser 1,00 €
-      </button>
-      <div class="quick-hint">Déclenche un paymentIntent à 100 centimes avec polling automatique</div>
-      <div id="quickResult"></div>
-    </div>
-
-    <!-- Paiement standard -->
-    <div class="card">
-      <div class="card-header">
-        <span class="badge badge-post">POST</span>
-        <span class="card-title">paymentIntent</span>
+  <!-- paymentIntent -->
+  <div class="card">
+    <div class="ch"><span class="badge bp">POST</span><span class="ct">paymentIntent</span></div>
+    <div class="cb">
+      <div class="row2">
+        <div class="field"><label>name</label><input id="pmN" value="caisse-sim-01"></div>
+        <div class="field"><label>amount (centimes)</label><input id="pmA" type="number" value="100"></div>
       </div>
-      <div class="card-body">
-        <div class="input-row">
-          <div class="field">
-            <label>name</label>
-            <input id="pmName" value="caisse-sim-01">
-          </div>
-          <div class="field">
-            <label>amount (centimes)</label>
-            <input id="pmAmount" type="number" value="100">
-          </div>
-        </div>
-        <div class="field">
-          <label>private_data (optionnel)</label>
-          <input id="pmPrivate" placeholder="FACTURE-001">
-        </div>
-        <div class="actions">
-          <button class="btn btn-primary" id="btnPay" onclick="startPayment()">
-            <div class="spin" id="paySpin"></div>
-            Lancer paiement
-          </button>
-          <button class="btn btn-danger" id="btnCancelPay" onclick="cancelPayment()" disabled>
-            Annuler
-          </button>
-          <button class="btn btn-neutral" onclick="pollPayment()" id="btnPollPay" disabled>
-            Forcer poll
-          </button>
-        </div>
-        <div class="polling-bar" id="payBar"></div>
-        <div class="response-panel" id="payResponse">
-          <div class="response-label">Réponse</div>
-          <pre class="json">—</pre>
-        </div>
+      <div class="field"><label>private_data — N° facture / référence</label><input id="pmP" placeholder="FACTURE-001"></div>
+      <div class="acts">
+        <button class="btn bp2" id="bPay" onclick="startPay()"><div class="spin" id="pSpin"></div>Lancer paiement</button>
+        <button class="btn br" id="bCnl" onclick="cancelPay()" disabled>Annuler</button>
+        <button class="btn bn" onclick="pollPay()" id="bPoll" disabled>Forcer poll</button>
       </div>
+      <div class="pb" id="payBar"></div>
+      <div class="rp" id="payR"><div class="rl">Réponse</div><pre>—</pre></div>
     </div>
+  </div>
 
-    <!-- Préautorisation -->
-    <div class="card">
-      <div class="card-header">
-        <span class="badge badge-post">POST</span>
-        <span class="card-title">preauthIntent — Préautorisation (CD=4)</span>
+  <!-- preauthIntent -->
+  <div class="card">
+    <div class="ch"><span class="badge bp">POST</span><span class="ct">preauthIntent — Préautorisation (CD=4)</span></div>
+    <div class="cb">
+      <div class="row2">
+        <div class="field"><label>name</label><input id="paN" value="caisse-sim-01"></div>
+        <div class="field"><label>amount (centimes)</label><input id="paA" type="number" value="100"></div>
       </div>
-      <div class="card-body">
-        <div class="input-row">
-          <div class="field">
-            <label>name</label>
-            <input id="paName" value="caisse-sim-01">
-          </div>
-          <div class="field">
-            <label>amount (centimes)</label>
-            <input id="paAmount" type="number" value="100">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="field">
-            <label>reference (max 12, optionnel)</label>
-            <input id="paRef" placeholder="auto-généré">
-          </div>
-          <div class="field">
-            <label>private_data (optionnel)</label>
-            <input id="paPrivate" placeholder="CAUTION-001">
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-primary" onclick="startPreauth()">Lancer préauth</button>
-        </div>
-        <div class="polling-bar" id="paBar"></div>
-        <div class="response-panel" id="paResponse">
-          <div class="response-label">Réponse</div>
-          <pre class="json">—</pre>
-        </div>
+      <div class="row2">
+        <div class="field"><label>reference (max 12)</label><input id="paR" placeholder="auto-générée"></div>
+        <div class="field"><label>private_data</label><input id="paP" placeholder="CAUTION-001"></div>
       </div>
+      <div class="acts"><button class="btn bp2" onclick="startPA()">Lancer préauth</button></div>
+      <div class="pb" id="paBar"></div>
+      <div class="rp" id="paR2"><div class="rl">Réponse</div><pre>—</pre></div>
     </div>
+  </div>
 
-    <!-- Valider préauth -->
-    <div class="card">
-      <div class="card-header">
-        <span class="badge badge-post">POST</span>
-        <span class="card-title">preauthValidate — Validation (CD=5)</span>
+  <!-- preauthValidate -->
+  <div class="card">
+    <div class="ch"><span class="badge bp">POST</span><span class="ct">preauthValidate — Validation (CD=5)</span></div>
+    <div class="cb">
+      <div class="row2">
+        <div class="field"><label>preauthId</label><input id="pvId" placeholder="depuis preauthIntent"></div>
+        <div class="field"><label>amount_final (centimes)</label><input id="pvA" type="number" value="100"></div>
       </div>
-      <div class="card-body">
-        <div class="input-row">
-          <div class="field">
-            <label>preauthId</label>
-            <input id="pvId" placeholder="depuis preauthIntent">
-          </div>
-          <div class="field">
-            <label>amount_final (centimes)</label>
-            <input id="pvAmount" type="number" value="100">
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-green" onclick="validatePreauth()">Valider (CD=5)</button>
-        </div>
-        <div class="polling-bar" id="pvBar"></div>
-        <div class="response-panel" id="pvResponse">
-          <div class="response-label">Réponse</div>
-          <pre class="json">—</pre>
-        </div>
-      </div>
+      <div class="acts"><button class="btn bgr" onclick="validatePA()">Valider (CD=5)</button></div>
+      <div class="pb" id="pvBar"></div>
+      <div class="rp" id="pvR"><div class="rl">Réponse</div><pre>—</pre></div>
     </div>
+  </div>
 
-    <!-- Annuler préauth -->
-    <div class="card">
-      <div class="card-header">
-        <span class="badge badge-post">POST</span>
-        <span class="card-title">preauthCancel — Annulation (CD=6)</span>
-      </div>
-      <div class="card-body">
-        <div class="field">
-          <label>preauthId</label>
-          <input id="pcId" placeholder="depuis preauthIntent">
-        </div>
-        <div class="actions">
-          <button class="btn btn-danger" onclick="cancelPreauth()">Annuler préauth (CD=6)</button>
-        </div>
-        <div class="polling-bar" id="pcBar"></div>
-        <div class="response-panel" id="pcResponse">
-          <div class="response-label">Réponse</div>
-          <pre class="json">—</pre>
-        </div>
-      </div>
+  <!-- preauthCancel -->
+  <div class="card">
+    <div class="ch"><span class="badge bp">POST</span><span class="ct">preauthCancel — Annulation (CD=6)</span></div>
+    <div class="cb">
+      <div class="field"><label>preauthId</label><input id="pcId" placeholder="depuis preauthIntent"></div>
+      <div class="acts"><button class="btn br" onclick="cancelPA()">Annuler préauth (CD=6)</button></div>
+      <div class="pb" id="pcBar"></div>
+      <div class="rp" id="pcR"><div class="rl">Réponse</div><pre>—</pre></div>
     </div>
+  </div>
 
-    <!-- Health -->
-    <div class="card">
-      <div class="card-header">
-        <span class="badge badge-get">GET</span>
-        <span class="card-title">health</span>
-      </div>
-      <div class="card-body">
-        <div class="actions">
-          <button class="btn btn-neutral" onclick="checkHealth()">Ping gateway</button>
-        </div>
-        <div class="response-panel" id="healthResponse">
-          <div class="response-label">Réponse</div>
-          <pre class="json">—</pre>
-        </div>
-      </div>
+  <!-- health -->
+  <div class="card">
+    <div class="ch"><span class="badge bg">GET</span><span class="ct">health</span></div>
+    <div class="cb">
+      <div class="acts"><button class="btn bn" onclick="doHealth()">Ping gateway</button></div>
+      <div class="rp" id="hR"><div class="rl">Réponse</div><pre>—</pre></div>
     </div>
+  </div>
 
-  </main>
-</div>
+</main>
+</div><!-- cols -->
 
 <div id="toast"></div>
-
 <script>
-// ── State ──────────────────────────────────────────────
-let currentTxId    = null;
-let currentPreauth = null;
-let pollTimer      = null;
-let pollPaTimer    = null;
+let txId=null, paId=null, pollT=null, pollPaT=null;
 
 // ── Config ─────────────────────────────────────────────
-function cfg(key, fallback) {
-  return localStorage.getItem('sim_' + key) || fallback;
+const C=k=>localStorage.getItem('s_'+k)||'';
+function loadCfg(){
+  ['cfgUrl','cfgApiKey','cfgWebhook','epPay','epStatus','epCancel','epPA','epPV','epPC','epPS','epHealth']
+  .forEach(id=>{const v=C(id);if(v)document.getElementById(id).value=v;});
+}
+function saveCfg(){
+  ['cfgUrl','cfgApiKey','cfgWebhook','epPay','epStatus','epCancel','epPA','epPV','epPC','epPS','epHealth']
+  .forEach(id=>localStorage.setItem('s_'+id, document.getElementById(id).value));
+  toast('Sauvegardé','ok'); ping();
 }
 
-function loadConfig() {
-  document.getElementById('cfgUrl').value        = cfg('url',    'http://127.0.0.1:8080');
-  document.getElementById('cfgApiKey').value      = cfg('apikey', '');
-  document.getElementById('cfgWebhook').value     = cfg('webhook', '');
-  document.getElementById('epPayment').value      = cfg('epPayment',       '/paymentIntent');
-  document.getElementById('epStatus').value       = cfg('epStatus',        '/checkPaymentStatus');
-  document.getElementById('epCancel').value       = cfg('epCancel',        '/cancelPayment');
-  document.getElementById('epPreauth').value      = cfg('epPreauth',       '/preauthIntent');
-  document.getElementById('epPreauthValidate').value = cfg('epPreauthValidate', '/preauthValidate');
-  document.getElementById('epPreauthCancel').value   = cfg('epPreauthCancel',   '/preauthCancel');
-  document.getElementById('epPreauthStatus').value   = cfg('epPreauthStatus',   '/checkPreauthStatus');
-  document.getElementById('epHealth').value       = cfg('epHealth', '/health');
+// ── HTTP ───────────────────────────────────────────────
+const base=()=>document.getElementById('cfgUrl').value.replace(/\/$/,'');
+const key =()=>document.getElementById('cfgApiKey').value;
+const wh  =()=>document.getElementById('cfgWebhook').value.trim();
+const ep  =id=>document.getElementById(id).value;
+
+async function api(method, path, body){
+  const h={'Content-Type':'application/json'};
+  if(key()) h['x-api-key']=key();
+  const o={method,headers:h};
+  if(body) o.body=JSON.stringify(body);
+  const r=await fetch(base()+path,o);
+  const t=await r.text();
+  try{return{ok:r.ok,status:r.status,data:JSON.parse(t)};}
+  catch{return{ok:r.ok,status:r.status,data:t};}
 }
 
-function saveConfig() {
-  const fields = ['url','apikey','webhook','epPayment','epStatus','epCancel',
-    'epPreauth','epPreauthValidate','epPreauthCancel','epPreauthStatus','epHealth'];
-  const ids    = ['cfgUrl','cfgApiKey','cfgWebhook','epPayment','epStatus','epCancel',
-    'epPreauth','epPreauthValidate','epPreauthCancel','epPreauthStatus','epHealth'];
-  fields.forEach((k,i) => localStorage.setItem('sim_' + k, document.getElementById(ids[i]).value));
-  toast('Configuration sauvegardée', 'ok');
-  pingHealth();
+// ── Display ────────────────────────────────────────────
+function show(id, data, state){
+  const p=document.getElementById(id);
+  p.className='rp '+state;
+  const ts=new Date().toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  p.innerHTML=`<div class="rl">Réponse <span class="ts">${ts}</span></div><pre>${hl(JSON.stringify(data,null,2))}</pre>`;
 }
-
-// ── HTTP helper ─────────────────────────────────────────
-function baseUrl()    { return document.getElementById('cfgUrl').value.replace(/\/$/, ''); }
-function apiKey()     { return document.getElementById('cfgApiKey').value; }
-function webhookUrl() { return document.getElementById('cfgWebhook').value.trim(); }
-
-async function apiFetch(method, path, body) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (apiKey()) headers['x-api-key'] = apiKey();
-  const opts = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(baseUrl() + path, opts);
-  const txt = await r.text();
-  try { return { ok: r.ok, status: r.status, data: JSON.parse(txt) }; }
-  catch { return { ok: r.ok, status: r.status, data: txt }; }
-}
-
-// ── Display ─────────────────────────────────────────────
-function showResponse(panelId, data, state /* ok|error|pending */) {
-  const panel = document.getElementById(panelId);
-  panel.className = 'response-panel ' + state;
-  const ts = new Date().toLocaleTimeString('fr', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  let html = `<div class="response-label">Réponse <span class="ts">${ts}</span></div>`;
-  html += `<pre class="json">${syntaxHighlight(JSON.stringify(data, null, 2))}</pre>`;
-  panel.innerHTML = html;
-}
-
-function syntaxHighlight(json) {
-  return json
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
-      let cls = 'num';
-      if (/^"/.test(m)) cls = /:$/.test(m) ? 'key' : 'str';
-      else if (/true|false/.test(m)) cls = 'bool';
-      else if (/null/.test(m)) cls = 'null';
-      return `<span class="${cls}">${m}</span>`;
+function hl(j){
+  return j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{
+      let c='num';
+      if(/^"/.test(m))c=/:$/.test(m)?'key':'str';
+      else if(/true|false/.test(m))c='bool';
+      else if(/null/.test(m))c='null';
+      return`<span class="${c}">${m}</span>`;
     });
 }
-
-function setBar(id, active) {
-  document.getElementById(id).classList.toggle('active', active);
+function bar(id,on){document.getElementById(id).classList.toggle('on',on);}
+function toast(msg,type){
+  const e=document.getElementById('toast');
+  e.textContent=msg;e.className='show '+(type||'');
+  clearTimeout(window._t);window._t=setTimeout(()=>e.className='',2800);
 }
 
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + (type || '');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => { el.className = ''; }, 2800);
+// ── Health ─────────────────────────────────────────────
+async function ping(){
+  try{
+    const r=await api('GET',ep('epHealth'));
+    document.getElementById('led').className='led '+(r.ok?'on':'off');
+    document.getElementById('ledTxt').textContent=r.ok?'En ligne':'Erreur '+r.status;
+  }catch{
+    document.getElementById('led').className='led off';
+    document.getElementById('ledTxt').textContent='Hors ligne';
+  }
+}
+async function doHealth(){
+  try{const r=await api('GET',ep('epHealth'));show('hR',r.data,r.ok?'ok':'err');}
+  catch(e){show('hR',{error:e.message},'err');}
 }
 
-// ── Health ──────────────────────────────────────────────
-async function pingHealth() {
-  const led = document.getElementById('healthLed');
-  const txt = document.getElementById('healthTxt');
-  try {
-    const r = await apiFetch('GET', document.getElementById('epHealth').value);
-    if (r.ok) {
-      led.className = 'led online';
-      txt.textContent = 'En ligne';
-    } else {
-      led.className = 'led offline'; txt.textContent = 'Erreur ' + r.status;
+// ── Quick pay ──────────────────────────────────────────
+async function quickPay(){
+  const b=document.getElementById('bqp'),sp=document.getElementById('qspin'),res=document.getElementById('qres');
+  b.disabled=true;sp.style.display='inline-block';res.innerHTML='';
+  try{
+    const r=await api('POST',ep('epPay'),{data:{name:'quick-test',amount:100,private_data:'QUICK-1EUR',...(wh()?{webhook_url:wh()}:{})}});
+    if(!r.ok||!r.data.idTransaction)throw new Error(JSON.stringify(r.data));
+    const id=r.data.idTransaction;
+    res.innerHTML=`<span class="sb sp">⏳ TX ${id.slice(0,8)}…</span>`;
+    const f=await pollDone(id);
+    const st=f?.status||'UNKNOWN';
+    res.innerHTML=`<span class="sb ${st==='APPROVED'?'sa':'sd'}">${st==='APPROVED'?'✓':'✗'} ${st}</span>`;
+    toast(st==='APPROVED'?'Paiement approuvé !':'Statut: '+st,st==='APPROVED'?'ok':'err');
+  }catch(e){res.innerHTML=`<span class="sb sd">✗ Erreur</span>`;toast('Erreur: '+e.message,'err');}
+  finally{b.disabled=false;sp.style.display='none';}
+}
+
+// ── Payment ────────────────────────────────────────────
+async function startPay(){
+  stopPoll();txId=null;
+  document.getElementById('bCnl').disabled=true;
+  document.getElementById('bPoll').disabled=true;
+  bar('payBar',true);
+  const n=document.getElementById('pmN').value||'caisse-sim';
+  const a=parseInt(document.getElementById('pmA').value)||100;
+  const p=document.getElementById('pmP').value||undefined;
+  try{
+    const r=await api('POST',ep('epPay'),{data:{name:n,amount:a,...(p?{private_data:p}:{}),...(wh()?{webhook_url:wh()}:{})}});
+    show('payR',r.data,r.ok?'pend':'err');
+    if(!r.ok||!r.data.idTransaction){bar('payBar',false);return;}
+    txId=r.data.idTransaction;
+    document.getElementById('bCnl').disabled=false;
+    document.getElementById('bPoll').disabled=false;
+    pollT=setInterval(pollPay,2000);
+  }catch(e){show('payR',{error:e.message},'err');bar('payBar',false);}
+}
+async function pollPay(){
+  if(!txId)return;
+  try{
+    const r=await api('GET',`${ep('epStatus')}?idTransaction=${txId}&name=${document.getElementById('pmN').value}`);
+    const s=r.data?.status==='APPROVED'?'ok':r.data?.status==='DECLINED'?'err':r.data?.isCompleted?'err':'pend';
+    show('payR',r.data,s);
+    if(r.data?.isCompleted){
+      stopPoll();bar('payBar',false);
+      document.getElementById('bCnl').disabled=true;
+      toast(r.data.status==='APPROVED'?'Paiement approuvé !':'Statut: '+r.data.status,r.data.status==='APPROVED'?'ok':'err');
     }
-  } catch {
-    led.className = 'led offline'; txt.textContent = 'Hors ligne';
-  }
+  }catch(e){show('payR',{error:e.message},'err');}
+}
+async function cancelPay(){
+  if(!txId)return;stopPoll();
+  try{
+    const r=await api('POST',ep('epCancel'),{idTransaction:txId});
+    show('payR',r.data,r.ok?'ok':'err');bar('payBar',false);
+    document.getElementById('bCnl').disabled=true;toast('Annulation envoyée','ok');
+  }catch(e){show('payR',{error:e.message},'err');}
+}
+function stopPoll(){if(pollT){clearInterval(pollT);pollT=null;}}
+
+// ── Preauth ────────────────────────────────────────────
+async function startPA(){
+  if(pollPaT){clearInterval(pollPaT);pollPaT=null;}paId=null;bar('paBar',true);
+  const n=document.getElementById('paN').value||'caisse-sim';
+  const a=parseInt(document.getElementById('paA').value)||100;
+  const ref=document.getElementById('paR').value||undefined;
+  const p=document.getElementById('paP').value||undefined;
+  try{
+    const r=await api('POST',ep('epPA'),{data:{name:n,amount:a,...(ref?{reference:ref}:{}),...(p?{private_data:p}:{}),...(wh()?{webhook_url:wh()}:{})}});
+    show('paR2',r.data,r.ok?'pend':'err');
+    if(!r.ok||!r.data.preauthId){bar('paBar',false);return;}
+    paId=r.data.preauthId;
+    document.getElementById('pvId').value=paId;
+    document.getElementById('pcId').value=paId;
+    pollPaT=setInterval(async()=>{
+      const pr=await api('GET',`${ep('epPS')}?preauthId=${paId}`);
+      show('paR2',pr.data,pr.data?.status==='APPROVED'?'ok':pr.data?.isCompleted?'err':'pend');
+      if(pr.data?.isCompleted){clearInterval(pollPaT);pollPaT=null;bar('paBar',false);toast('Préauth: '+pr.data.status,pr.data.status==='APPROVED'?'ok':'err');}
+    },2000);
+  }catch(e){show('paR2',{error:e.message},'err');bar('paBar',false);}
+}
+async function validatePA(){
+  const id=document.getElementById('pvId').value.trim(),a=parseInt(document.getElementById('pvA').value)||100;
+  if(!id){toast('Renseigner un preauthId','err');return;}
+  bar('pvBar',true);
+  try{
+    const r=await api('POST',ep('epPV'),{data:{preauthId:id,amount_final:a}});
+    show('pvR',r.data,r.ok?'pend':'err');if(!r.ok){bar('pvBar',false);return;}
+    const t=setInterval(async()=>{
+      const pr=await api('GET',`${ep('epPS')}?preauthId=${id}`);
+      show('pvR',pr.data,pr.data?.status==='APPROVED'?'ok':pr.data?.isCompleted?'err':'pend');
+      if(pr.data?.isCompleted){clearInterval(t);bar('pvBar',false);toast('Validation: '+pr.data.status,pr.data.status==='APPROVED'?'ok':'err');}
+    },2000);
+  }catch(e){show('pvR',{error:e.message},'err');bar('pvBar',false);}
+}
+async function cancelPA(){
+  const id=document.getElementById('pcId').value.trim();
+  if(!id){toast('Renseigner un preauthId','err');return;}
+  bar('pcBar',true);
+  try{
+    const r=await api('POST',ep('epPC'),{data:{preauthId:id}});
+    show('pcR',r.data,r.ok?'pend':'err');if(!r.ok){bar('pcBar',false);return;}
+    const t=setInterval(async()=>{
+      const pr=await api('GET',`${ep('epPS')}?preauthId=${id}`);
+      show('pcR',pr.data,pr.data?.isCompleted?'ok':'pend');
+      if(pr.data?.isCompleted){clearInterval(t);bar('pcBar',false);toast('Annulation: '+pr.data.status,'ok');}
+    },2000);
+  }catch(e){show('pcR',{error:e.message},'err');bar('pcBar',false);}
 }
 
-async function checkHealth() {
-  try {
-    const r = await apiFetch('GET', document.getElementById('epHealth').value);
-    showResponse('healthResponse', r.data, r.ok ? 'ok' : 'error');
-  } catch(e) {
-    showResponse('healthResponse', {error: e.message}, 'error');
-  }
-}
-
-// ── Quick Pay ───────────────────────────────────────────
-async function quickPay() {
-  const btn = document.getElementById('btnQuickPay');
-  const spin = document.getElementById('quickSpin');
-  const result = document.getElementById('quickResult');
-  btn.disabled = true; spin.style.display = 'inline-block';
-  result.innerHTML = '';
-
-  try {
-    const r = await apiFetch('POST', document.getElementById('epPayment').value, {
-      data: { name: 'quick-test', amount: 100, private_data: 'QUICK-1EUR',
-              ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
-    });
-    if (!r.ok || !r.data.idTransaction) throw new Error(JSON.stringify(r.data));
-
-    const txId = r.data.idTransaction;
-    result.innerHTML = `<span class="status-badge s-pending">⏳ Transaction ${txId.slice(0,8)}…</span>`;
-
-    // Poll
-    const final = await pollUntilDone(txId, document.getElementById('epStatus').value, 'paymentStatus');
-    const status = final?.status || 'UNKNOWN';
-    const cls = status === 'APPROVED' ? 's-approved' : status === 'DECLINED' ? 's-declined' : 's-error';
-    result.innerHTML = `<span class="status-badge ${cls}">${status === 'APPROVED' ? '✓' : '✗'} ${status}</span>`;
-    toast(status === 'APPROVED' ? 'Paiement approuvé !' : 'Paiement refusé : ' + status,
-          status === 'APPROVED' ? 'ok' : 'err');
-  } catch(e) {
-    result.innerHTML = `<span class="status-badge s-error">✗ Erreur</span>`;
-    toast('Erreur: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false; spin.style.display = 'none';
-  }
-}
-
-// ── Payment ─────────────────────────────────────────────
-async function startPayment() {
-  clearPolling();
-  currentTxId = null;
-  document.getElementById('btnCancelPay').disabled = true;
-  document.getElementById('btnPollPay').disabled   = true;
-  setBar('payBar', true);
-
-  const name    = document.getElementById('pmName').value   || 'caisse-sim';
-  const amount  = parseInt(document.getElementById('pmAmount').value) || 100;
-  const priv    = document.getElementById('pmPrivate').value || undefined;
-
-  try {
-    const r = await apiFetch('POST', document.getElementById('epPayment').value, {
-      data: { name, amount,
-              ...(priv ? {private_data: priv} : {}),
-              ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
-    });
-    showResponse('payResponse', r.data, r.ok ? 'pending' : 'error');
-    if (!r.ok || !r.data.idTransaction) { setBar('payBar', false); return; }
-
-    currentTxId = r.data.idTransaction;
-    document.getElementById('btnCancelPay').disabled = false;
-    document.getElementById('btnPollPay').disabled   = false;
-
-    // Auto-poll
-    pollTimer = setInterval(() => pollPayment(), 2000);
-  } catch(e) {
-    showResponse('payResponse', {error: e.message}, 'error');
-    setBar('payBar', false);
-  }
-}
-
-async function pollPayment() {
-  if (!currentTxId) return;
-  try {
-    const ep = document.getElementById('epStatus').value;
-    const r  = await apiFetch('GET', `${ep}?idTransaction=${currentTxId}&name=${document.getElementById('pmName').value}`);
-    const state = r.data?.status === 'APPROVED' ? 'ok'
-                : r.data?.status === 'DECLINED' ? 'error'
-                : r.data?.isCompleted ? 'error' : 'pending';
-    showResponse('payResponse', r.data, state);
-
-    if (r.data?.isCompleted) {
-      clearPolling();
-      setBar('payBar', false);
-      document.getElementById('btnCancelPay').disabled = true;
-      toast(r.data.status === 'APPROVED' ? 'Paiement approuvé !' : 'Paiement: ' + r.data.status,
-            r.data.status === 'APPROVED' ? 'ok' : 'err');
-    }
-  } catch(e) {
-    showResponse('payResponse', {error: e.message}, 'error');
-  }
-}
-
-async function cancelPayment() {
-  if (!currentTxId) return;
-  clearPolling();
-  try {
-    const r = await apiFetch('POST', document.getElementById('epCancel').value,
-      { idTransaction: currentTxId });
-    showResponse('payResponse', r.data, r.ok ? 'ok' : 'error');
-    setBar('payBar', false);
-    document.getElementById('btnCancelPay').disabled = true;
-    toast('Annulation envoyée', 'ok');
-  } catch(e) {
-    showResponse('payResponse', {error: e.message}, 'error');
-  }
-}
-
-function clearPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-}
-
-// ── Preauth ─────────────────────────────────────────────
-async function startPreauth() {
-  if (pollPaTimer) { clearInterval(pollPaTimer); pollPaTimer = null; }
-  currentPreauth = null;
-  setBar('paBar', true);
-
-  const name   = document.getElementById('paName').value   || 'caisse-sim';
-  const amount = parseInt(document.getElementById('paAmount').value) || 100;
-  const ref    = document.getElementById('paRef').value    || undefined;
-  const priv   = document.getElementById('paPrivate').value|| undefined;
-
-  try {
-    const r = await apiFetch('POST', document.getElementById('epPreauth').value, {
-      data: { name, amount,
-        ...(ref  ? {reference:    ref}  : {}),
-        ...(priv ? {private_data: priv} : {}),
-        ...(webhookUrl() ? {webhook_url: webhookUrl()} : {}) }
-    });
-    showResponse('paResponse', r.data, r.ok ? 'pending' : 'error');
-    if (!r.ok || !r.data.preauthId) { setBar('paBar', false); return; }
-
-    currentPreauth = r.data.preauthId;
-    // Auto-fill validate/cancel
-    document.getElementById('pvId').value = currentPreauth;
-    document.getElementById('pcId').value = currentPreauth;
-
-    // Poll
-    pollPaTimer = setInterval(async () => {
-      const ep = document.getElementById('epPreauthStatus').value;
-      const pr = await apiFetch('GET', `${ep}?preauthId=${currentPreauth}`);
-      showResponse('paResponse', pr.data,
-        pr.data?.status === 'APPROVED' ? 'ok' :
-        pr.data?.status === 'DECLINED' ? 'error' :
-        pr.data?.isCompleted ? 'error' : 'pending');
-      if (pr.data?.isCompleted) {
-        clearInterval(pollPaTimer); pollPaTimer = null;
-        setBar('paBar', false);
-        toast('Préauth: ' + pr.data.status,
-          pr.data.status === 'APPROVED' ? 'ok' : 'err');
-      }
-    }, 2000);
-  } catch(e) {
-    showResponse('paResponse', {error: e.message}, 'error');
-    setBar('paBar', false);
-  }
-}
-
-async function validatePreauth() {
-  const id  = document.getElementById('pvId').value.trim();
-  const amt = parseInt(document.getElementById('pvAmount').value) || 100;
-  if (!id) { toast('Renseigner un preauthId', 'err'); return; }
-  setBar('pvBar', true);
-  try {
-    const r = await apiFetch('POST', document.getElementById('epPreauthValidate').value,
-      { data: { preauthId: id, amount_final: amt } });
-    showResponse('pvResponse', r.data, r.ok ? 'pending' : 'error');
-    if (!r.ok) { setBar('pvBar', false); return; }
-
-    // Poll
-    const t = setInterval(async () => {
-      const ep = document.getElementById('epPreauthStatus').value;
-      const pr = await apiFetch('GET', `${ep}?preauthId=${id}`);
-      showResponse('pvResponse', pr.data,
-        pr.data?.status === 'APPROVED' ? 'ok' :
-        pr.data?.status === 'DECLINED' ? 'error' :
-        pr.data?.isCompleted ? 'error' : 'pending');
-      if (pr.data?.isCompleted) {
-        clearInterval(t); setBar('pvBar', false);
-        toast('Validation: ' + pr.data.status, pr.data.status === 'APPROVED' ? 'ok' : 'err');
-      }
-    }, 2000);
-  } catch(e) {
-    showResponse('pvResponse', {error: e.message}, 'error');
-    setBar('pvBar', false);
-  }
-}
-
-async function cancelPreauth() {
-  const id = document.getElementById('pcId').value.trim();
-  if (!id) { toast('Renseigner un preauthId', 'err'); return; }
-  setBar('pcBar', true);
-  try {
-    const r = await apiFetch('POST', document.getElementById('epPreauthCancel').value,
-      { data: { preauthId: id } });
-    showResponse('pcResponse', r.data, r.ok ? 'pending' : 'error');
-    if (!r.ok) { setBar('pcBar', false); return; }
-
-    // Poll
-    const t = setInterval(async () => {
-      const ep = document.getElementById('epPreauthStatus').value;
-      const pr = await apiFetch('GET', `${ep}?preauthId=${id}`);
-      showResponse('pcResponse', pr.data, pr.data?.isCompleted ? 'ok' : 'pending');
-      if (pr.data?.isCompleted) {
-        clearInterval(t); setBar('pcBar', false);
-        toast('Annulation préauth: ' + pr.data.status, 'ok');
-      }
-    }, 2000);
-  } catch(e) {
-    showResponse('pcResponse', {error: e.message}, 'error');
-    setBar('pcBar', false);
-  }
-}
-
-// ── Poll until done helper ──────────────────────────────
-async function pollUntilDone(txId, ep, _) {
-  return new Promise(resolve => {
-    const t = setInterval(async () => {
-      try {
-        const r = await apiFetch('GET', `${ep}?idTransaction=${txId}&name=quick-test`);
-        if (r.data?.isCompleted) { clearInterval(t); resolve(r.data); }
-      } catch { clearInterval(t); resolve(null); }
-    }, 2000);
-    setTimeout(() => { clearInterval(t); resolve(null); }, 190000);
+async function pollDone(id){
+  return new Promise(resolve=>{
+    const t=setInterval(async()=>{
+      try{const r=await api('GET',`${ep('epStatus')}?idTransaction=${id}&name=quick-test`);if(r.data?.isCompleted){clearInterval(t);resolve(r.data);}}
+      catch{clearInterval(t);resolve(null);}
+    },2000);
+    setTimeout(()=>{clearInterval(t);resolve(null);},190000);
   });
 }
 
-// ── PWA Service Worker ────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-
-// ── Init ────────────────────────────────────────────────
-loadConfig();
-pingHealth();
-setInterval(pingHealth, 30000);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+loadCfg();ping();setInterval(ping,30000);
 </script>
 </body>
 </html>
